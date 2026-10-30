@@ -11,3 +11,9 @@ services:
       POSTGRES_USERNAME: 'postgres'
       POSTGRES_PASSWORD: 'postgres'
       POSTGRES_DATABASE: 'postgres'
+
+  redis:
+    image: redis
+    ports:
+      - '6379:6379'
+    restart: always
