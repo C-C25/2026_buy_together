@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersEntity } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
@@ -10,7 +10,8 @@ import {
   ENV_JWT_REFRESH_SECRET_KEY,
 } from '../common/const/env-keys-values.const';
 import { JwtService } from '@nestjs/jwt';
-import { Payload } from './const/auth.payload.const';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.module';
 
 @Injectable()
 export class AuthService {
@@ -18,11 +19,8 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    @Inject(REDIS_CLIENT) private readonly redisClient: Redis,
   ) {}
-
-  // autoTokenIssued(tokenType: string) {
-  //   return this.refreshSignPayload(tokenType);
-  // }
 
   private accessSignPayload(
     user: Pick<UsersEntity, 'email' | 'id'>,
@@ -54,6 +52,36 @@ export class AuthService {
       secret: this.configService.getOrThrow<string>(ENV_JWT_REFRESH_SECRET_KEY),
       expiresIn: '1h',
     });
+  }
+
+  // TODO Redis 적용
+  rotateAccess(user: Pick<UsersEntity, 'email' | 'id'>) {
+    // const storedRefreshToken = await this.redisClient.get(
+    //   `refresh_token_${user.id}`,
+    // );
+
+    // if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+    //   throw new UnauthorizedException('유효하지 않은 Refresh Token 입니다.');
+    // }
+
+    return {
+      accessToken: this.accessSignPayload(user, 'access'),
+    };
+  }
+
+  // TODO Redis 적용
+  rotateRefresh(user: Pick<UsersEntity, 'email' | 'id'>) {
+    // const storedRefreshToken = await this.redisClient.get(
+    //   `refresh_token_${user.id}`,
+    // );
+
+    // if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+    //   throw new UnauthorizedException('유효하지 않은 Refresh Token 입니다.');
+    // }
+
+    return {
+      refreshToken: this.refreshSignPayload(user, 'refresh'),
+    };
   }
 
   loginUser(user: Pick<UsersEntity, 'email' | 'id'>) {
@@ -95,5 +123,13 @@ export class AuthService {
       password: hash,
     });
     return this.loginUser(user);
+  }
+
+  async logoutUser(userId: string) {
+    await this.redisClient.del(`refresh_token_${userId}`);
+
+    return {
+      message: '로그아웃 되었습니다.',
+    };
   }
 }
