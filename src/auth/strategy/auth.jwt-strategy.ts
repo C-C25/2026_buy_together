@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
@@ -18,10 +18,18 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'access') {
   }
 
   async validate(payload: Payload) {
+    if (payload.tokenType !== 'access') {
+      throw new UnauthorizedException('올바른 토큰이 아닙니다.');
+    }
+
+    if (!payload.sub) {
+      throw new UnauthorizedException('올바른 토큰이 아닙니다.');
+    }
+
     return {
       id: payload.sub,
       email: payload.email,
-      token: payload.tokenType,
+      tokenType: payload.tokenType,
     };
   }
 }
@@ -36,10 +44,18 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'refresh') {
   }
 
   async validate(payload: Payload) {
+    if (payload.tokenType !== 'refresh') {
+      throw new UnauthorizedException('올바른 토큰이 아닙니다.');
+    }
+
+    if (!payload.sub) {
+      throw new UnauthorizedException('올바른 토큰이 아닙니다.');
+    }
+
     return {
       id: payload.sub,
       email: payload.email,
-      token: payload.tokenType,
+      tokenType: payload.tokenType,
     };
   }
 }
